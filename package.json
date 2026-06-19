@@ -1,0 +1,17 @@
+{
+  "name": "mizani-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "test:score": "node --input-type=module -e \"import { scoreTransactions } from './src/scorer.js'; console.log(JSON.stringify(scoreTransactions([{date:'2026-05-01',description:'opening',amount:1000000,balance:1000000},{date:'2026-06-01',description:'withdrawal',amount:-300000,balance:700000},{date:'2026-06-15',description:'payroll',amount:-500000,balance:200000}]), null, 2));\""
+  },
+  "dependencies": {
+    "cors": "latest",
+    "dotenv": "latest",
+    "ethers": "^6.13.5",
+    "express": "latest"
+  }
+}
