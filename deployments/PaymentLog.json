@@ -1,0 +1,8 @@
+{
+  "name": "PaymentLog",
+  "address": "0xa786fEB386e44F13bE7bA33A1EEf28CCbcFb2Eef",
+  "abi": "[{\"type\":\"event\",\"anonymous\":false,\"name\":\"PaymentRecorded\",\"inputs\":[{\"type\":\"address\",\"name\":\"sender\",\"indexed\":true},{\"type\":\"string\",\"name\":\"label\",\"indexed\":false},{\"type\":\"uint256\",\"name\":\"amount\",\"indexed\":false},{\"type\":\"uint256\",\"name\":\"recordedAt\",\"indexed\":false}]},{\"type\":\"function\",\"name\":\"recordPayment\",\"constant\":false,\"payable\":false,\"inputs\":[{\"type\":\"string\",\"name\":\"label\"},{\"type\":\"uint256\",\"name\":\"amount\"}],\"outputs\":[]}]",
+  "network": "fuji",
+  "chainId": 43113,
+  "deployedAt": "2026-06-20T01:47:34.990Z"
+}
