@@ -206,7 +206,7 @@ app.get('/onchain-payments', async (req, res) => {
       }))
       .reverse();
 
-    res.json({ service, version, payments, contractExplorerUrl });
+    res.json({ service, version, paymentLogAddress: address, payments, contractExplorerUrl });
   } catch (err) {
     sendError(res, 500, err.message, 'CHAIN_READ_FAILED');
   }
