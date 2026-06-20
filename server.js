@@ -10,11 +10,14 @@ import { scoreTransactions } from './src/scorer.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
+const service = 'mizani-backend';
+const version = process.env.npm_package_version || '0.1.0';
 const maxTransactions = 2000;
 const maxOnChainPayments = 100;
 const maxAmount = 1_000_000_000;
 const maxLabelLength = 120;
 const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : ['http://localhost:5173'];
+const fujiExplorerUrl = process.env.FUJI_EXPLORER_URL || 'https://testnet.snowtrace.io';
 
 function parseNumber(value) {
   if (value === undefined || value === null || value === '') return NaN;
@@ -68,7 +71,13 @@ function loadContractConfig() {
   return {
     address: validAddress ? address : null,
     abi,
+    explorerUrl: fujiExplorerUrl,
+    contractExplorerUrl: validAddress ? `${fujiExplorerUrl}/address/${address}` : null,
   };
+}
+
+function sendError(res, statusCode, message, code = 'REQUEST_FAILED') {
+  res.status(statusCode).json({ error: { code, message } });
 }
 
 const apiLimiter = rateLimit({
@@ -99,7 +108,20 @@ app.use(express.json({ limit: '1mb' }));
 app.use(apiLimiter);
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, service, version, timestamp: new Date().toISOString() });
+});
+
+app.get('/config', (req, res) => {
+  const config = loadContractConfig();
+  res.json({
+    service,
+    version,
+    paymentLogAddress: config.address,
+    fujiRpcConfigured: Boolean(process.env.FUJI_RPC_URL),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    snowtraceBaseUrl: fujiExplorerUrl,
+    contractExplorerUrl: config.contractExplorerUrl,
+  });
 });
 
 app.post('/score', (req, res) => {
@@ -107,9 +129,9 @@ app.post('/score', (req, res) => {
     const transactions = sanitizeTransactions(req.body?.transactions);
     const onChainPayments = sanitizeOnChainPayments(req.body?.onChainPayments);
     const result = scoreTransactions(transactions, onChainPayments);
-    res.json(result);
+    res.json({ service, version, ...result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, 400, err.message, 'INVALID_SCORE_PAYLOAD');
   }
 });
 
@@ -152,17 +174,17 @@ Return a practical note with:
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'Gemini report failed');
     const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text).join('\n') || '';
-    res.json({ report: text });
+    res.json({ service, version, report: text, generatedAt: new Date().toISOString() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, err.message, 'REPORT_FAILED');
   }
 });
 
 app.get('/onchain-payments', async (req, res) => {
   try {
-    const { address, abi } = loadContractConfig();
+    const { address, abi, explorerUrl, contractExplorerUrl } = loadContractConfig();
     if (!address || !process.env.FUJI_RPC_URL || abi.length === 0) {
-      return res.json({ payments: [] });
+      return res.json({ service, version, payments: [], contractExplorerUrl });
     }
 
     const provider = new ethers.JsonRpcProvider(process.env.FUJI_RPC_URL);
@@ -180,15 +202,16 @@ app.get('/onchain-payments', async (req, res) => {
         blockNumber: event.blockNumber,
         transactionHash: event.transactionHash,
         timestamp: event.blockTimestamp || event.args.recordedAt?.toString() || null,
+        explorerUrl: `${explorerUrl}/tx/${event.transactionHash}`,
       }))
       .reverse();
 
-    res.json({ payments });
+    res.json({ service, version, payments, contractExplorerUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, err.message, 'CHAIN_READ_FAILED');
   }
 });
 
 app.listen(port, () => {
-  console.log(`Mizani backend listening on ${port}`);
+  console.log(`${service} v${version} listening on ${port}`);
 });
