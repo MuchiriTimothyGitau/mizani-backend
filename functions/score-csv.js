@@ -102,48 +102,37 @@ export function scoreTransactions(transactions, onChainPayments = []) {
   if (runwayMonths !== null && runwayMonths < RUNWAY_WARNING_MONTHS) {
     flags.push(`Runway is ${runwayMonths.toFixed(1)} months, below the 3-month warning threshold.`);
   }
-
   if (totalOutflow > totalInflow * 1.2) {
     flags.push(`Cash outflow is ${(totalOutflow / Math.max(totalInflow, 1)).toFixed(1)}x cash collected, so the business is burning faster than it is collecting.`);
   }
-
   if (topInflow && topInflowShare >= CUSTOMER_CONCENTRATION_THRESHOLD) {
     flags.push(`${topInflow.description || 'Largest inflow'} represents ${(topInflowShare * 100).toFixed(1)}% of cash collected, creating customer concentration risk.`);
   }
-
   if (largestExpense && largestExpenseShare >= EXPENSE_CONCENTRATION_THRESHOLD) {
     flags.push(`${largestExpense.description || 'Largest expense'} is ${(largestExpenseShare * 100).toFixed(1)}% of cash outflow, so one cost line can distort the runway.`);
   }
-
   if (burnAcceleration >= BURN_ACCELERATION_THRESHOLD) {
     flags.push(`Average outflow rose ${(burnAcceleration * 100).toFixed(1)}% in the second half of the period, showing burn acceleration.`);
   }
-
   if (daysSinceLastInflow !== null && daysSinceLastInflow > DAYS_SINCE_INFLOW_WARNING) {
     flags.push(`No cash inflow appears in the last ${daysSinceLastInflow} days of the CSV period.`);
   }
-
   if (balanceRows === 0) {
     flags.push('CSV has no balance column, so balance and runway are derived from signed transactions and may be incomplete.');
   }
-
   const largestRoundWithdrawal = outflows
     .filter((row) => isRoundWithdrawal(row.amount))
     .sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount))
     .pop();
-
   if (largestRoundWithdrawal && Math.abs(largestRoundWithdrawal.amount) > latestBalance * ROUND_WITHDRAWAL_THRESHOLD) {
     flags.push(`${largestRoundWithdrawal.description || 'Round-number withdrawal'} of ${Math.abs(largestRoundWithdrawal.amount).toLocaleString('en-KE')} is ${(Math.abs(largestRoundWithdrawal.amount) / latestBalance * 100).toFixed(1)}% of the latest balance.`);
   }
-
   if (totalInflow === 0) {
     flags.push('No cash inflows appear in the CSV period, so revenue visibility is weak.');
   }
-
   if (outflows.length === 0) {
     flags.push('No cash outflows appear in the CSV period, so burn rate may be understated.');
   }
-
   const riskLevel = runwayMonths !== null && runwayMonths < RUNWAY_WARNING_MONTHS || topInflowShare >= 0.6 || burnAcceleration >= 0.5 ? 'high' : flags.length > 0 ? 'medium' : 'low';
 
   return {
@@ -171,4 +160,25 @@ export function scoreTransactions(transactions, onChainPayments = []) {
     },
     transactions: normalized,
   };
+}
+
+const service = 'mizani-score-csv';
+const version = '0.1.0';
+
+function sanitizeErrorMessage(message) {
+  if (!message) return 'Scoring failed';
+  if (typeof message !== 'string') return 'Scoring failed';
+  const trimmed = message.trim();
+  if (!trimmed) return 'Scoring failed';
+  return trimmed.length > 200 ? trimmed.slice(0, 200) + '...' : trimmed;
+}
+
+export default async function(req, res) {
+  try {
+    const { transactions, onChainPayments } = req.body || {};
+    const result = scoreTransactions(transactions || [], onChainPayments || []);
+    return res.json({ service, version, ...result });
+  } catch (err) {
+    return res.json({ service, version, ok: false, error: sanitizeErrorMessage(err.message) }, 400);
+  }
 }

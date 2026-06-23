@@ -1,0 +1,9 @@
+{
+  "name": "score-csv-function",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "appwrite": "^11.0.0",
+    "ethers": "^6.9.0"
+  }
+}
