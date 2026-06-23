@@ -165,12 +165,20 @@ export function scoreTransactions(transactions, onChainPayments = []) {
 const service = 'mizani-score-csv';
 const version = '0.1.0';
 
+function sanitizeErrorMessage(message) {
+  if (!message) return 'Scoring failed';
+  if (typeof message !== 'string') return 'Scoring failed';
+  const trimmed = message.trim();
+  if (!trimmed) return 'Scoring failed';
+  return trimmed.length > 200 ? trimmed.slice(0, 200) + '...' : trimmed;
+}
+
 export default async function(req, res) {
   try {
     const { transactions, onChainPayments } = req.body || {};
     const result = scoreTransactions(transactions || [], onChainPayments || []);
     return res.json({ service, version, ...result });
   } catch (err) {
-    return res.json({ service, version, ok: false, error: err.message }, 400);
+    return res.json({ service, version, ok: false, error: sanitizeErrorMessage(err.message) }, 400);
   }
 }

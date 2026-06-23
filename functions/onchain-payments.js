@@ -7,6 +7,14 @@ const FUJI_RPC_URL = process.env.FUJI_RPC_URL;
 const FUJI_EXPLORER_URL = process.env.FUJI_EXPLORER_URL || 'https://testnet.snowtrace.io';
 const MAX_PAYMENTS = 100;
 
+function sanitizeErrorMessage(message) {
+  if (!message) return 'Chain data fetch failed';
+  if (typeof message !== 'string') return 'Chain data fetch failed';
+  const trimmed = message.trim();
+  if (!trimmed) return 'Chain data fetch failed';
+  return trimmed.length > 200 ? trimmed.slice(0, 200) + '...' : trimmed;
+}
+
 function parsePaymentLogConfig() {
   const abi = [
     "event PaymentRecorded(address indexed sender, string label, uint256 amount, uint256 recordedAt)",
@@ -51,6 +59,6 @@ export default async function(req, res) {
 
     return res.json({ service, version, paymentLogAddress: config.address, payments, contractExplorerUrl: config.contractExplorerUrl });
   } catch (err) {
-    return res.json({ service, version, ok: false, error: err.message }, 500);
+    return res.json({ service, version, ok: false, error: sanitizeErrorMessage(err.message) }, 500);
   }
 }

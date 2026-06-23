@@ -1,0 +1,8 @@
+{
+  "name": "generate-report-function",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "appwrite": "^11.0.0"
+  }
+}
